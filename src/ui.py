@@ -3,6 +3,11 @@ from dash import html, dcc, Input, Output, State
 import dash_bootstrap_components as dbc
 import requests
 import plotly.graph_objects as go
+import logging
+
+# Configure logging
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+logger = logging.getLogger(__name__)
 
 app = dash.Dash(__name__, external_stylesheets=[dbc.themes.SLATE])
 
@@ -223,6 +228,24 @@ def compute_receive_amount(send_amount, send_coin, receive_coin, n_clicks, n_int
         return f"{receive_amount:,.6f}"
     except requests.RequestException:
         return ""
+
+@app.callback(
+    Output("price-output", "children"),
+    Input("refresh-btn", "n_clicks")
+)
+def refresh_prices(n_clicks):
+    if n_clicks is None:
+        return "Click refresh to get prices."
+    try:
+        logger.info("Refreshing prices.")
+        response = requests.get(f"{COINGECKO_BASE_URL}/simple/price?ids={','.join(CRYPTO_IDS)}&vs_currencies=usd")
+        response.raise_for_status()
+        data = response.json()
+        logger.info("Successfully refreshed prices.")
+        return "Prices updated."
+    except requests.RequestException as e:
+        logger.error(f"Error refreshing prices: {str(e)}")
+        return "Error refreshing prices. Please try again later."
 
 if __name__ == "__main__":
     app.run(debug=True)
